@@ -4,3 +4,9 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+.env
+test-results/
+playwright-report/
+blob-report/
+.cache/
+coverage/
