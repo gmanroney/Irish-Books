@@ -1,0 +1,245 @@
+## Replit prompt: Irish Ltd company bookkeeping → reports (VAT/PAYE/DLA)
+
+You are an expert full-stack engineer and accounting-literate product builder. Build a web app called **“Irish LtdCo Books”** for an **Irish limited company** (EUR) that lets users enter transactions and automatically generates **board-ready financial reports**.
+
+### 1) Tech stack (Replit-friendly)
+
+* Next.js (App Router) + TypeScript + Tailwind
+* shadcn/ui components
+* Prisma + SQLite
+* Server Actions for writes
+* Auth: single-user MVP; optional NextAuth later
+* Must run with one-click “Run” in Replit
+
+---
+
+## 2) Irish-specific defaults and concepts
+
+### Currency / locale
+
+* Default currency **EUR (€)**
+* Default date format **DD/MM/YYYY** display
+
+### VAT (Ireland)
+
+Implement VAT as first-class:
+
+* VAT registration toggle: **VAT Registered?** yes/no
+* Default VAT rates (configurable in settings):
+
+  * Standard: **23%**
+  * Reduced: **13.5%**
+  * Second reduced: **9%**
+  * Zero: **0%**
+    (These match Revenue’s current VAT rate table effective from **1 Jan 2025**.) ([Revenue][1])
+
+VAT codes:
+
+* `S23` (Output/Input, 23%)
+* `R13_5` (13.5%)
+* `SR9` (9%)
+* `Z0` (0%)
+* `EXEMPT` (no VAT)
+* `OOS` Outside scope
+
+### Payroll (Ireland) — MVP scope
+
+Do **not** try to fully compute PAYE/USC/PRSI. Instead:
+
+* Provide a **“Payroll Journal”** guided flow that posts:
+
+  * Dr Wages & Salaries (gross)
+  * Cr Bank (net paid)
+  * Cr Payroll Liabilities (PAYE/USC/EE PRSI/ER PRSI as separate liability accounts or one combined “Payroll Liabilities”)
+    Let the user enter the split amounts from their payroll provider.
+
+### Director Loan Account (DLA)
+
+Include a Director Loan Account and surface risk warnings:
+
+* Show DLA balance prominently on dashboard
+* Flag if **overdrawn (credit balance)** and show a warning: “Potential tax/BIK implications — confirm with your accountant.”
+  (Implement the warnings generically; don’t hard-code tax computations because they vary.)
+
+---
+
+## 3) Data model (Prisma)
+
+Create tables:
+
+### Core
+
+* `Company` (id, name, currency="EUR", vatRegistered bool, country="IE", createdAt)
+* `Period` (id, companyId, name, startDate, endDate, isClosed)
+* `Account` (id, companyId, code, name, type: Asset|Liability|Equity|Revenue|Expense, subtype optional, parentId optional, isControl bool)
+* `Transaction` (id, companyId, date, description, reference, source: Manual|Guided|Import, createdAt)
+* `JournalLine` (id, transactionId, accountId, debit, credit, vatCodeId nullable, vatAmount nullable, counterpartyId nullable)
+
+### VAT
+
+* `VatCode` (id, companyId, code, description, rate, kind: Output|Input|Exempt|Zero|OutsideScope)
+
+### Counterparties + (optional invoices/bills later)
+
+* `Counterparty` (id, companyId, name, type: Customer|Supplier|Other, email optional)
+
+---
+
+## 4) Seed Chart of Accounts (Irish SME Ltd company)
+
+Seed a sensible Irish SME CoA with controls:
+
+### Assets
+
+* 1000 Bank Current Account
+* 1010 Cash
+* 1100 Accounts Receivable (CONTROL)
+* 1200 Prepayments
+* 1300 VAT Recoverable (Input VAT)
+* 1500 Fixed Assets – Computer Equipment
+* 1510 Fixed Assets – Office Equipment
+* 1590 Accumulated Depreciation (contra-asset)
+
+### Liabilities
+
+* 2000 Accounts Payable (CONTROL)
+* 2100 VAT Payable (Output VAT)
+* 2200 Payroll Liabilities (PAYE/USC/PRSI)
+* 2300 Corporation Tax Payable (placeholder)
+* 2400 Loans Payable
+
+### Equity
+
+* 3000 Share Capital
+* 3100 Retained Earnings
+* 3200 Director Loan Account (DLA)
+
+### Revenue
+
+* 4000 Sales – Services
+* 4010 Sales – Products (optional)
+* 4900 Other Income
+
+### Expenses
+
+* 5000 Cost of Sales (optional)
+* 6000 Wages & Salaries
+* 6010 Employer PRSI (optional)
+* 6100 Rent
+* 6200 Utilities
+* 6300 Marketing
+* 6400 Software & Subscriptions
+* 6500 Professional Fees
+* 6600 Travel
+* 6700 Bank Charges
+* 6800 Depreciation
+
+---
+
+## 5) Transaction entry UX (must-have)
+
+Two entry modes:
+
+### A) Guided Irish Ltd flows (generate balanced journals)
+
+1. **Sales invoice (on credit)**
+   Dr Accounts Receivable (gross)
+   Cr Sales Revenue (net)
+   Cr VAT Payable (VAT)
+
+2. **Customer payment received**
+   Dr Bank
+   Cr Accounts Receivable
+
+3. **Supplier bill (on credit)**
+   Dr Expense/Asset (net)
+   Dr VAT Recoverable (VAT)
+   Cr Accounts Payable (gross)
+
+4. **Pay supplier**
+   Dr Accounts Payable
+   Cr Bank
+
+5. **Expense paid from bank**
+   Dr Expense/Asset (net)
+   Dr VAT Recoverable (VAT)
+   Cr Bank (gross)
+
+6. **Payroll journal (Ireland)**
+   Inputs: Gross wages, net paid, totals for PAYE, USC, PRSI (and optional employer PRSI)
+   Posts:
+   Dr Wages & Salaries (gross)
+   Dr Employer PRSI (optional)
+   Cr Bank (net paid)
+   Cr Payroll Liabilities (the remainder)
+
+7. **Director paid company expense personally**
+   Dr Expense/Asset (+ VAT if relevant)
+   Cr Director Loan Account
+
+8. **Director withdrawal from company**
+   Dr Director Loan Account
+   Cr Bank
+
+9. **Buy fixed asset + depreciation**
+   Asset purchase: Dr Fixed Asset (net), Dr VAT Recoverable, Cr Bank/AP
+   Depreciation: Dr Depreciation, Cr Accumulated Depreciation
+
+Each guided form must show a preview and “Balanced ✅” validation before save.
+
+### B) Advanced journal entry
+
+Multi-line Dr/Cr entry with live balancing. Block save if not balanced.
+
+---
+
+## 6) Reports (generated from journal lines)
+
+Reports page with filters: company, period, date range, compare vs previous.
+
+Produce:
+
+* **Profit & Loss** (Revenue, Expenses, Operating profit, Net profit)
+* **Balance Sheet** (Assets, Liabilities, Equity; enforce A = L + E)
+* **Trial Balance** (totals Dr = totals Cr)
+* **General Ledger** (per account, running balance)
+* **VAT Summary** (Output VAT, Input VAT, Net VAT payable/receivable; by VAT code)
+* **Cash Flow (direct method MVP)** from Bank/Cash movements
+
+---
+
+## 7) Dashboard (director-friendly)
+
+* KPIs: Revenue YTD, Expenses YTD, Net profit YTD, Bank balance, VAT payable estimate, AR/AP totals
+* DLA widget with red warning if overdrawn
+* Charts (Recharts): monthly revenue/expenses, profit trend, bank balance trend
+
+---
+
+## 8) Import/export + sample data
+
+* CSV import template (date, description, reference, debit account, credit account, net, vatCode)
+* Export: transactions, journal lines, VAT report, statements as CSV
+* “Load Irish SME sample data” button (2–3 months including VAT + payroll + DLA activity)
+
+---
+
+## 9) Tests + README
+
+* Unit tests for: balancing, VAT calc, known dataset statement totals
+* README explains:
+
+  * VAT approach and configurable rates
+  * Payroll is journal-only (no tax computation)
+  * DLA is tracked and flagged, but tax rules are not automated
+
+Build order:
+
+1. Prisma schema + seeds (CoA + VAT codes)
+2. Transaction entry (guided + advanced)
+3. Trial balance + P&L + Balance Sheet
+4. VAT report + cash flow
+5. Dashboard + charts
+6. Import/export + tests + README
+
+Deliver a working app in this Replit project.
