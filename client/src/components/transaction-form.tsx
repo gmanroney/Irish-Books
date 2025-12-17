@@ -193,9 +193,23 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         lines.push({ id: "4", transactionId: tId, accountId: "acc_2200", debit: 0, credit: diff });
       }
 
+      // Only update if lines have changed (basic check or rely on stable deps)
+      // Since we are fixing dependencies, this should be fine.
       setPreviewLines(lines);
     }
-  }, [watchAll, mode, vatCodes]);
+  }, [
+    watchAll.type,
+    watchAll.amount,
+    watchAll.vatRate,
+    watchAll.accountId,
+    watchAll.netPay,
+    watchAll.paye,
+    watchAll.usc,
+    watchAll.prsiEe,
+    watchAll.prsiEr,
+    mode,
+    vatCodes
+  ]);
 
 
   async function onGuidedSubmit(data: z.infer<typeof guidedSchema>) {
