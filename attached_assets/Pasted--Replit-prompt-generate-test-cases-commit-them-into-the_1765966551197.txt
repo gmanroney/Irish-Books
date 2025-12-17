@@ -1,0 +1,229 @@
+## Replit prompt: generate test cases, commit them into the repo, and run them in the build
+
+You are an expert QA engineer + accountant + DevOps engineer working inside this Replit repository. Your job is to **create automated test cases**, **add them to the repo**, and ensure they **run automatically as part of the build/CI process**.
+
+### Project context
+
+This is an **Irish limited company** bookkeeping app (EUR) using **double-entry**, **VAT**, **payroll journals**, **inventory/COGS**, and produces **P&L / Balance Sheet / Trial Balance / Cash Flow / VAT report**.
+
+The test company is:
+
+* Irish limited company, sells **Republic of Ireland only**
+* Manufactures **wooden pallets** and **plastic pallets**
+* **120 employees**
+* **VAT registered** (standard-rated domestic sales unless stated)
+
+### Hard requirements
+
+1. **Create the tests** (unit + integration + E2E) described below.
+2. **Add them to the repository** under `/tests` and/or conventional folders.
+3. Update the repo so tests run:
+
+   * locally via `npm test` and `npm run test:e2e`
+   * **automatically in the build pipeline** (prebuild/build step)
+   * and in CI if a workflow exists (GitHub Actions etc.)
+4. Make the test DB deterministic:
+
+   * Use **SQLite** + Prisma
+   * Reset DB before tests
+   * Seed the dataset programmatically
+5. Ensure the build fails if tests fail.
+
+---
+
+## Tooling to use (preferred)
+
+* Unit/integration tests: **Vitest**
+* E2E tests: **Playwright**
+* DB: Prisma + SQLite
+
+### Add/confirm scripts in package.json
+
+Add these scripts (or equivalent):
+
+* `"test": "vitest run"`
+* `"test:watch": "vitest"`
+* `"test:e2e": "playwright test"`
+* `"test:all": "npm run test && npm run test:e2e"`
+* `"build": "npm run test && <existing build command>"`
+
+  * If the project already has a build command, prepend tests to it.
+  * If there’s a `prebuild` hook, use `"prebuild": "npm run test"`.
+
+Also add:
+
+* `"postinstall": "prisma generate"` if Prisma is used
+
+### CI integration
+
+If the repo contains `.github/workflows/*`:
+
+* Add a workflow step to run:
+
+  * `npm ci`
+  * `npx prisma generate`
+  * `npm run test`
+  * (optional) `npx playwright install --with-deps` then `npm run test:e2e`
+    If there is no CI workflow:
+* Create one at `.github/workflows/test.yml` that runs on push + PR.
+
+---
+
+## Test dataset + test plan (must be included in repo)
+
+Create:
+
+* `/tests/TEST_PLAN.md` describing scenarios, coverage, and assumptions
+* `/tests/helpers/resetDb.ts` and `/tests/helpers/seedIrishPalletCo.ts`
+
+### Seed dataset: exact accounting scenarios and numbers
+
+#### A) Opening balances (1 Jan 2026)
+
+Post opening balances:
+
+* Bank: €200,000 Dr
+* Inventory Raw Materials: €60,000 Dr
+* Inventory Finished Goods: €40,000 Dr
+* Fixed Assets – Plant & Machinery: €500,000 Dr
+* Accumulated Depreciation: €150,000 Cr
+* Share Capital: €100,000 Cr
+* Retained Earnings: balancing figure Cr so A = L + E
+
+**Assertions**
+
+* Balance Sheet balances exactly
+* Trial balance debits == credits
+
+#### B) Buy raw materials (Input VAT)
+
+Supplier bill (credit):
+
+* Net €50,000, VAT 23% €11,500, Gross €61,500
+  Journal:
+* Dr Inventory Raw Materials €50,000
+* Dr VAT Recoverable €11,500
+* Cr Accounts Payable €61,500
+
+Then pay supplier:
+
+* Dr Accounts Payable €61,500
+* Cr Bank €61,500
+
+#### C) Issue materials to production (MVP: direct to COGS)
+
+* Dr COGS – Materials €30,000
+* Cr Inventory Raw Materials €30,000
+
+#### D) Sales invoices (Output VAT)
+
+Customer A (wood pallets):
+
+* Net €80,000, VAT €18,400, Gross €98,400
+  Customer B (plastic pallets):
+* Net €50,000, VAT €11,500, Gross €61,500
+
+Post invoices:
+
+* Dr Accounts Receivable gross
+* Cr Revenue net (split wood/plastic)
+* Cr VAT Payable VAT
+
+Then receive payments in full:
+
+* Dr Bank, Cr AR (for each)
+
+#### E) Payroll journal (120 employees, monthly totals)
+
+* Gross wages €480,000
+* Employer PRSI €55,000
+* Net paid €330,000
+* Payroll liabilities €205,000
+  Journal:
+* Dr Wages €480,000
+* Dr Employer PRSI €55,000
+* Cr Bank €330,000
+* Cr Payroll Liabilities €205,000
+
+Then pay payroll liabilities:
+
+* Dr Payroll Liabilities €205,000
+* Cr Bank €205,000
+
+#### F) Utilities/Energy (Input VAT, paid)
+
+* Net €20,000, VAT €4,600, Gross €24,600
+* Dr Utilities/Energy €20,000
+* Dr VAT Recoverable €4,600
+* Cr Bank €24,600
+
+#### G) Depreciation
+
+* Dr Depreciation €8,000
+* Cr Accumulated Depreciation €8,000
+
+#### H) VAT report assertion
+
+For the test period:
+
+* Output VAT = €29,900
+* Input VAT = €11,500 + €4,600 = €16,100
+* Net VAT payable = €13,800
+
+---
+
+## Tests to implement
+
+### Unit tests (Vitest)
+
+* `vat.test.ts`: VAT calculation by code/rate; rounding
+* `posting.test.ts`: debits=credits validation
+* `trialBalance.test.ts`: aggregates equal totals
+* `reportsPnL.test.ts`: revenue/expense totals match expected from seed
+* `balanceSheet.test.ts`: A = L + E
+* `cashFlowDirect.test.ts`: opening → closing bank reconciliation from bank movements
+
+### Integration tests
+
+Call the app’s actual posting functions (server actions/services):
+
+* Guided sale invoice generates 3 lines (AR, Revenue, VAT)
+* Supplier bill generates Inventory, VAT Recoverable, AP
+* Prevent save on unbalanced journal
+* Period/date filtering changes report totals correctly
+
+### E2E tests (Playwright)
+
+* Create a sales invoice via UI and verify “Balanced ✅”
+* Run VAT report UI and confirm displayed Output/Input/Net figures
+* View Trial Balance UI and confirm totals match
+  If UI doesn’t exist yet, create minimal pages/components required to support these E2E flows.
+
+---
+
+## Repo modifications (must do)
+
+* Add dependencies: `vitest`, `@vitest/ui` (optional), `playwright`, `@playwright/test`
+* Add configs:
+
+  * `vitest.config.ts`
+  * `playwright.config.ts`
+* Add GitHub Actions workflow if missing: `.github/workflows/test.yml`
+* Ensure tests run in the build:
+
+  * Use `prebuild` or update `build` script to include `npm run test`
+  * Fail build if any test fails
+* Ensure the seed/reset helpers run automatically in test setup
+
+---
+
+## Execution requirement
+
+After implementing everything:
+
+1. Run `npm test` and ensure it passes
+2. Run `npm run test:e2e` and ensure it passes
+3. Run `npm run build` and ensure it runs tests and passes
+4. Summarize the final repo changes and how to run locally
+
+Proceed now and implement directly in this repository.
