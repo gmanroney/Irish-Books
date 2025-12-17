@@ -81,6 +81,13 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
       // Ensure amount is a number for calculations
       const amountVal = Number(amount) || 0;
+      
+      // Ensure payroll fields are numbers
+      const netPayVal = Number(netPay) || 0;
+      const payeVal = Number(paye) || 0;
+      const uscVal = Number(usc) || 0;
+      const prsiEeVal = Number(prsiEe) || 0;
+      const prsiErVal = Number(prsiEr) || 0;
 
       // Helper to get rate
       const vRate = vatCodes.find(v => v.id === vatRate)?.rate || 0;
@@ -165,9 +172,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         // Cr Payroll Liabilities (PAYE+USC+PRSI)
         
         const gross = amountVal; // Treat 'amount' as Gross Wages for simplicity in UI, or sum components
-        const net = netPay || 0;
-        const erPrsi = prsiEr || 0;
-        const liability = (paye || 0) + (usc || 0) + (prsiEe || 0) + erPrsi;
+        const net = netPayVal;
+        const erPrsi = prsiErVal;
+        // const liability = payeVal + uscVal + prsiEeVal + erPrsi;
         
         // Actually, normally: Gross = Net + PAYE + USC + PRSI(Ee).
         // Cost to company = Gross + PRSI(Er).
