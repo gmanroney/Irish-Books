@@ -79,6 +79,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
       const id = "preview";
       const tId = "temp";
 
+      // Ensure amount is a number for calculations
+      const amountVal = Number(amount) || 0;
+
       // Helper to get rate
       const vRate = vatCodes.find(v => v.id === vatRate)?.rate || 0;
 
@@ -87,10 +90,10 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         // Dr AR (Gross)
         // Cr Sales (Net)
         // Cr VAT (VAT)
-        const net = amount / (1 + vRate);
-        const vat = amount - net;
+        const net = amountVal / (1 + vRate);
+        const vat = amountVal - net;
         
-        lines.push({ id: "1", transactionId: tId, accountId: "acc_1100", debit: amount, credit: 0 }); // AR
+        lines.push({ id: "1", transactionId: tId, accountId: "acc_1100", debit: amountVal, credit: 0 }); // AR
         lines.push({ id: "2", transactionId: tId, accountId: "acc_4000", debit: 0, credit: net, vatCodeId: vatRate, vatAmount: vat }); // Sales
         lines.push({ id: "3", transactionId: tId, accountId: "acc_2100", debit: 0, credit: vat }); // VAT Payable
       } 
@@ -99,60 +102,60 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
          // Dr Expense (Net)
          // Dr VAT Recoverable
          // Cr Bank (Gross)
-         const net = amount / (1 + vRate);
-         const vat = amount - net;
+         const net = amountVal / (1 + vRate);
+         const vat = amountVal - net;
          const expAcc = accountId || "acc_6700"; // Default to Bank Charges if not set
 
          lines.push({ id: "1", transactionId: tId, accountId: expAcc, debit: net, credit: 0, vatCodeId: vatRate, vatAmount: vat }); // Expense
          lines.push({ id: "2", transactionId: tId, accountId: "acc_1300", debit: vat, credit: 0 }); // VAT Input
-         lines.push({ id: "3", transactionId: tId, accountId: "acc_1000", debit: 0, credit: amount }); // Bank
+         lines.push({ id: "3", transactionId: tId, accountId: "acc_1000", debit: 0, credit: amountVal }); // Bank
       }
       else if (type === "bill") {
         // Supplier Bill (on credit)
         // Dr Expense (Net)
         // Dr VAT Recoverable
         // Cr AP (Gross)
-        const net = amount / (1 + vRate);
-        const vat = amount - net;
+        const net = amountVal / (1 + vRate);
+        const vat = amountVal - net;
         const expAcc = accountId || "acc_6700";
 
         lines.push({ id: "1", transactionId: tId, accountId: expAcc, debit: net, credit: 0, vatCodeId: vatRate, vatAmount: vat });
         lines.push({ id: "2", transactionId: tId, accountId: "acc_1300", debit: vat, credit: 0 });
-        lines.push({ id: "3", transactionId: tId, accountId: "acc_2000", debit: 0, credit: amount }); // AP
+        lines.push({ id: "3", transactionId: tId, accountId: "acc_2000", debit: 0, credit: amountVal }); // AP
       }
       else if (type === "payment") {
         // Customer Payment
         // Dr Bank
         // Cr AR
-        lines.push({ id: "1", transactionId: tId, accountId: "acc_1000", debit: amount, credit: 0 });
-        lines.push({ id: "2", transactionId: tId, accountId: "acc_1100", debit: 0, credit: amount });
+        lines.push({ id: "1", transactionId: tId, accountId: "acc_1000", debit: amountVal, credit: 0 });
+        lines.push({ id: "2", transactionId: tId, accountId: "acc_1100", debit: 0, credit: amountVal });
       }
       else if (type === "bill_payment") {
         // Pay Supplier
         // Dr AP
         // Cr Bank
-        lines.push({ id: "1", transactionId: tId, accountId: "acc_2000", debit: amount, credit: 0 });
-        lines.push({ id: "2", transactionId: tId, accountId: "acc_1000", debit: 0, credit: amount });
+        lines.push({ id: "1", transactionId: tId, accountId: "acc_2000", debit: amountVal, credit: 0 });
+        lines.push({ id: "2", transactionId: tId, accountId: "acc_1000", debit: 0, credit: amountVal });
       }
       else if (type === "dla_withdraw") {
         // Director Withdrawal
         // Dr DLA
         // Cr Bank
-        lines.push({ id: "1", transactionId: tId, accountId: "acc_3200", debit: amount, credit: 0 });
-        lines.push({ id: "2", transactionId: tId, accountId: "acc_1000", debit: 0, credit: amount });
+        lines.push({ id: "1", transactionId: tId, accountId: "acc_3200", debit: amountVal, credit: 0 });
+        lines.push({ id: "2", transactionId: tId, accountId: "acc_1000", debit: 0, credit: amountVal });
       }
       else if (type === "dla_spend") {
         // Director paid expense personally
         // Dr Expense (Net)
         // Dr VAT
         // Cr DLA (Gross)
-        const net = amount / (1 + vRate);
-        const vat = amount - net;
+        const net = amountVal / (1 + vRate);
+        const vat = amountVal - net;
         const expAcc = accountId || "acc_6600"; // Travel default
 
         lines.push({ id: "1", transactionId: tId, accountId: expAcc, debit: net, credit: 0, vatCodeId: vatRate, vatAmount: vat });
         lines.push({ id: "2", transactionId: tId, accountId: "acc_1300", debit: vat, credit: 0 });
-        lines.push({ id: "3", transactionId: tId, accountId: "acc_3200", debit: 0, credit: amount }); // DLA
+        lines.push({ id: "3", transactionId: tId, accountId: "acc_3200", debit: 0, credit: amountVal }); // DLA
       }
       else if (type === "payroll") {
         // Payroll Journal
@@ -161,7 +164,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
         // Cr Bank (Net Pay)
         // Cr Payroll Liabilities (PAYE+USC+PRSI)
         
-        const gross = amount; // Treat 'amount' as Gross Wages for simplicity in UI, or sum components
+        const gross = amountVal; // Treat 'amount' as Gross Wages for simplicity in UI, or sum components
         const net = netPay || 0;
         const erPrsi = prsiEr || 0;
         const liability = (paye || 0) + (usc || 0) + (prsiEe || 0) + erPrsi;
@@ -246,10 +249,10 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   name="type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Transaction Type</FormLabel>
+                      <FormLabel>Transaction Type <span className="text-red-500">*</span></FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger>
+                          <SelectTrigger data-testid="select-type-trigger">
                             <SelectValue placeholder="Select type" />
                           </SelectTrigger>
                         </FormControl>
@@ -288,9 +291,9 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   name="description"
                   render={({ field }) => (
                     <FormItem className="col-span-2">
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>Description <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. Web Design Services" {...field} />
+                        <Input placeholder="e.g. Web Design Services" {...field} data-testid="input-description" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -304,7 +307,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                     <FormItem>
                       <FormLabel>Reference (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. INV-001" {...field} />
+                        <Input placeholder="e.g. INV-001" {...field} data-testid="input-reference" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -317,10 +320,20 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        {watchAll.type === 'payroll' ? 'Gross Wages' : 'Total Amount (Gross)'}
+                        {watchAll.type === 'payroll' ? 'Gross Wages' : 'Total Amount (Gross)'} <span className="text-red-500">*</span>
                       </FormLabel>
                       <FormControl>
-                        <Input type="number" step="0.01" {...field} />
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          placeholder="0.00"
+                          {...field}
+                          onChange={(e) => {
+                            // Let the user type freely, validation happens on submit or blur
+                            field.onChange(e.target.value);
+                          }}
+                          data-testid="input-amount"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -440,7 +453,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                 </CardContent>
               </Card>
 
-              <Button type="submit" className="w-full">Save Transaction</Button>
+              <Button type="submit" className="w-full" data-testid="button-save-transaction">Save Transaction</Button>
             </form>
           </Form>
         </TabsContent>
