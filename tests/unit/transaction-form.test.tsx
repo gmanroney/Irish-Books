@@ -198,6 +198,58 @@ describe('TransactionForm', () => {
     });
   });
 
+  it('validates reference constraints', async () => {
+    const onSuccess = vi.fn();
+    render(
+      <AppProvider>
+        <TransactionForm onSuccess={onSuccess} />
+      </AppProvider>
+    );
+
+    const descriptionInput = screen.getByTestId('input-description');
+    fireEvent.change(descriptionInput, { target: { value: 'Test Ref' } });
+
+    const amountInput = screen.getByTestId('input-amount');
+    fireEvent.change(amountInput, { target: { value: '100' } });
+
+    const referenceInput = screen.getByTestId('input-reference');
+
+    // Test 1: Spaces not allowed
+    fireEvent.change(referenceInput, { target: { value: 'INV 001' } });
+    const saveButton = screen.getByTestId('button-save-transaction');
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Reference cannot contain spaces/i)).toBeInTheDocument();
+    });
+    expect(onSuccess).not.toHaveBeenCalled();
+
+    // Test 2: Max length
+    fireEvent.change(referenceInput, { target: { value: 'A'.repeat(26) } });
+    fireEvent.click(saveButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText(/Reference must be at most 25 characters/i)).toBeInTheDocument();
+    });
+    
+    // Test 3: Uniqueness (Need to seed a transaction first or rely on seed data)
+    // Seed data has "INC-001", "INV-2024-001", "PAY-001", "SUB-001", "DLA-001"
+    fireEvent.change(referenceInput, { target: { value: 'INV-2024-001' } });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Invoice number\/Reference must be unique/i)).toBeInTheDocument();
+    });
+
+    // Test 4: Valid reference
+    fireEvent.change(referenceInput, { target: { value: 'UNIQUE-001' } });
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalled();
+    });
+  });
+
   it('renders expense account selection for expenses', async () => {
     const onSuccess = vi.fn();
     render(

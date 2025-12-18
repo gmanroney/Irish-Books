@@ -35,7 +35,10 @@ const guidedSchema = z.object({
   ]),
   date: z.date(),
   description: z.string().min(3, "Description is required"),
-  reference: z.string().optional(),
+  reference: z.string()
+    .max(25, "Reference must be at most 25 characters")
+    .regex(/^\S*$/, "Reference cannot contain spaces")
+    .optional(),
   // Dynamic fields based on type
   amount: z.coerce.number().min(0.01, "Amount must be greater than 0"),
   vatRate: z.string().optional(),
@@ -53,7 +56,7 @@ interface TransactionFormProps {
 }
 
 export function TransactionForm({ onSuccess }: TransactionFormProps) {
-  const { addTransaction, accounts, vatCodes } = useAppStore();
+  const { addTransaction, accounts, vatCodes, transactions } = useAppStore();
   const [mode, setMode] = useState<"guided" | "advanced">("guided");
   const [previewLines, setPreviewLines] = useState<JournalLine[]>([]);
   
@@ -223,6 +226,18 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
 
 
   async function onGuidedSubmit(data: z.infer<typeof guidedSchema>) {
+    // Uniqueness check for reference
+    if (data.reference && data.reference.length > 0) {
+      const exists = transactions.some(t => t.reference === data.reference);
+      if (exists) {
+        form.setError("reference", { 
+          type: "manual", 
+          message: "Invoice number/Reference must be unique" 
+        });
+        return;
+      }
+    }
+
     const transaction: Transaction = {
       id: Math.random().toString(36).substring(7),
       date: data.date.toISOString(),
