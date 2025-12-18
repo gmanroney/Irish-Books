@@ -13,11 +13,40 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Account, AccountType } from "@/lib/types";
 import { format } from "date-fns";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { useRef, useState } from "react";
 
 export default function ReportsPage() {
   const { accounts, getAccountBalance, transactions, vatCodes } = useAppStore();
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState("pnl");
+
+  const handleExportPDF = async () => {
+    if (!reportRef.current) return;
+
+    const canvas = await html2canvas(reportRef.current, {
+      scale: 2, // Improve resolution
+      logging: false,
+      useCORS: true
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const imgWidth = 210; // A4 width in mm
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+    pdf.save(`financial-report-${activeTab}-${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+  };
 
   const fmt = (n: number) => new Intl.NumberFormat('en-IE', { style: 'currency', currency: 'EUR' }).format(n);
+
 
   // --- Profit & Loss Calculation ---
   const revenueAccounts = accounts.filter(a => a.type === 'Revenue');
@@ -78,22 +107,23 @@ export default function ReportsPage() {
           <h2 className="text-3xl font-bold tracking-tight font-heading">Financial Reports</h2>
           <p className="text-muted-foreground">Real-time financial statements.</p>
         </div>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" className="gap-2" onClick={handleExportPDF}>
           <Download className="h-4 w-4" />
           Export PDF
         </Button>
       </div>
 
-      <Tabs defaultValue="pnl" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-3 lg:w-[400px]">
           <TabsTrigger value="pnl">Profit & Loss</TabsTrigger>
           <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
           <TabsTrigger value="vat">VAT Return</TabsTrigger>
         </TabsList>
 
+        <div ref={reportRef} className="bg-background p-4 rounded-lg">
         {/* Profit & Loss Content */}
-        <TabsContent value="pnl" className="space-y-4">
-          <Card className="max-w-3xl mx-auto shadow-sm print:shadow-none">
+        <TabsContent value="pnl" className="space-y-4 mt-0">
+          <Card className="max-w-3xl mx-auto shadow-sm print:shadow-none border-none">
             <CardHeader className="text-center border-b pb-6">
               <CardTitle className="text-2xl font-serif">Profit & Loss Statement</CardTitle>
               <CardDescription>Emerald Tech Solutions Ltd</CardDescription>
@@ -157,8 +187,8 @@ export default function ReportsPage() {
         </TabsContent>
 
         {/* Balance Sheet Content */}
-        <TabsContent value="bs" className="space-y-4">
-          <Card className="max-w-3xl mx-auto shadow-sm">
+        <TabsContent value="bs" className="space-y-4 mt-0">
+          <Card className="max-w-3xl mx-auto shadow-sm border-none">
             <CardHeader className="text-center border-b pb-6">
               <CardTitle className="text-2xl font-serif">Balance Sheet</CardTitle>
               <CardDescription>Emerald Tech Solutions Ltd</CardDescription>
@@ -256,8 +286,8 @@ export default function ReportsPage() {
         </TabsContent>
 
         {/* VAT Report */}
-        <TabsContent value="vat" className="space-y-4">
-          <Card className="max-w-4xl mx-auto shadow-sm">
+        <TabsContent value="vat" className="space-y-4 mt-0">
+          <Card className="max-w-4xl mx-auto shadow-sm border-none">
              <CardHeader className="text-center border-b pb-6">
               <CardTitle className="text-2xl font-serif">VAT Return Summary</CardTitle>
               <CardDescription>Emerald Tech Solutions Ltd</CardDescription>
@@ -308,6 +338,7 @@ export default function ReportsPage() {
             </CardContent>
           </Card>
         </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
