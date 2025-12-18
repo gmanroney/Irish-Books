@@ -314,7 +314,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                     <FormItem>
                       <FormLabel>Reference (Optional)</FormLabel>
                       <FormControl>
-                        <Input placeholder="e.g. INV-001" {...field} data-testid="input-reference" />
+                        <Input placeholder="e.g. INV-001" {...field} value={field.value ?? ''} data-testid="input-reference" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -406,7 +406,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Net Pay (Paid from Bank)</FormLabel>
-                          <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                          <FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ''} /></FormControl>
                         </FormItem>
                       )}
                     />
@@ -416,7 +416,7 @@ export function TransactionForm({ onSuccess }: TransactionFormProps) {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Employer PRSI</FormLabel>
-                          <FormControl><Input type="number" step="0.01" {...field} /></FormControl>
+                          <FormControl><Input type="number" step="0.01" {...field} value={field.value ?? ''} /></FormControl>
                         </FormItem>
                       )}
                     />
