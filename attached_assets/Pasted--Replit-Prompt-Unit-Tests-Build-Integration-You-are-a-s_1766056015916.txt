@@ -1,0 +1,80 @@
+## 🔹 Replit Prompt: Unit Tests + Build Integration
+
+> You are a senior software engineer and DevOps practitioner.
+>
+> **Goal:** Add comprehensive unit testing to this repository and ensure tests run automatically on every build.
+>
+> ### Tasks
+>
+> 1. **Detect the project stack**
+>
+>    * Identify the primary language(s) and framework(s) used in the repository.
+>    * Detect existing build tooling (e.g. npm, yarn, pnpm, poetry, pip, gradle, maven, make, etc.).
+> 2. **Choose appropriate test framework**
+>
+>    * JavaScript / TypeScript → Jest or Vitest
+>    * Python → pytest
+>    * Java → JUnit
+>    * Go → built-in `testing` package
+>    * If multiple languages exist, configure tests for each.
+> 3. **Create unit test structure**
+>
+>    * Add a `/tests` or `__tests__` directory following ecosystem conventions.
+>    * Write **meaningful unit tests** for:
+>
+>      * Core business logic
+>      * Edge cases
+>      * Error handling
+>    * Mock external dependencies (APIs, databases, file system).
+>    * Ensure tests are deterministic and fast.
+> 4. **Add test configuration**
+>
+>    * Add required config files (e.g. `pytest.ini`, `jest.config.js`, `vitest.config.ts`).
+>    * Configure coverage reporting.
+>    * Fail the build if any test fails.
+> 5. **Integrate tests into build**
+>
+>    * Update build scripts so tests run automatically:
+>
+>      * `npm test` / `npm run build`
+>      * `make build`
+>      * `poetry run pytest`
+>    * Ensure **tests run before any build or deploy step**.
+> 6. **CI / Replit compatibility**
+>
+>    * Ensure everything runs in a fresh environment.
+>    * Add or update `.replit` and `replit.nix` (if present) so:
+>
+>      * Dependencies install automatically
+>      * Tests run on `replit run`
+> 7. **Documentation**
+>
+>    * Update `README.md` with:
+>
+>      * How to run tests locally
+>      * How tests run automatically during builds
+>      * How to add new tests
+> 8. **Validation**
+>
+>    * Run the tests.
+>    * Fix any failures.
+>    * Confirm the build fails if a test is intentionally broken.
+>
+> ### Output Requirements
+>
+> * Commit all test files and config to the repository.
+> * Use clear naming and comments.
+> * Do not remove existing functionality.
+> * Prefer simplicity and clarity over cleverness.
+
+---
+
+## 🔹 Optional Enhancements (you can append if you want)
+
+Add this if you want extra quality gates:
+
+> * Enforce minimum code coverage (e.g. 80%).
+> * Add a pre-commit hook to run tests.
+> * Add linting checks as part of the build.
+
+ 
