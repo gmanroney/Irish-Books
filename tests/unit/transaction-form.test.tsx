@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { TransactionForm } from '@/components/transaction-form';
 import { AppProvider } from '@/lib/store';
 import { vi, describe, it, expect } from 'vitest';
@@ -114,5 +115,119 @@ describe('TransactionForm', () => {
       // Or we can just check onSuccess was NOT called
       expect(onSuccess).not.toHaveBeenCalled();
     });
+  });
+
+  it('renders payroll fields when payroll type is selected', async () => {
+    const onSuccess = vi.fn();
+    render(
+      <AppProvider>
+        <TransactionForm onSuccess={onSuccess} />
+      </AppProvider>
+    );
+
+    // Select "Payroll Journal"
+    // The Select component in Shadcn is tricky to test with simple fireEvent.change
+    // We usually need to click trigger, then click item.
+    
+    const trigger = screen.getByTestId('select-type-trigger');
+    fireEvent.click(trigger);
+    
+    // Wait for content
+    // Use getAllByText and take the last one, or use a more specific selector like role="option"
+    // Radix UI renders options with role="option"
+    const payrollItem = await screen.findByRole('option', { name: 'Payroll Journal' });
+    fireEvent.click(payrollItem);
+
+    // Check for payroll specific fields
+    expect(await screen.findByText('Net Pay (Paid from Bank)')).toBeInTheDocument();
+    expect(screen.getByText('Employer PRSI')).toBeInTheDocument();
+
+
+    // Fill payroll fields
+    const netPayInput = screen.getByLabelText('Net Pay (Paid from Bank)');
+    fireEvent.change(netPayInput, { target: { value: '2000' } });
+    
+    const amountInput = screen.getByTestId('input-amount');
+    fireEvent.change(amountInput, { target: { value: '3000' } }); // Gross
+
+    const prsiErInput = screen.getByLabelText('Employer PRSI');
+    fireEvent.change(prsiErInput, { target: { value: '330' } });
+
+    const descriptionInput = screen.getByTestId('input-description');
+    fireEvent.change(descriptionInput, { target: { value: 'Jan Payroll' } });
+
+    // Save
+    const saveButton = screen.getByTestId('button-save-transaction');
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('renders and submits DLA Spend correctly', async () => {
+    const onSuccess = vi.fn();
+    render(
+      <AppProvider>
+        <TransactionForm onSuccess={onSuccess} />
+      </AppProvider>
+    );
+
+    const trigger = screen.getByTestId('select-type-trigger');
+    fireEvent.click(trigger);
+    
+    const dlaItem = await screen.findByRole('option', { name: 'Director Paid Expense' });
+    fireEvent.click(dlaItem);
+
+    // Expect account selector
+    expect(await screen.findByText('Expense/Asset Account')).toBeInTheDocument();
+
+    // Fill form
+    const descriptionInput = screen.getByTestId('input-description');
+    fireEvent.change(descriptionInput, { target: { value: 'Lunch' } });
+
+    const amountInput = screen.getByTestId('input-amount');
+    fireEvent.change(amountInput, { target: { value: '50' } });
+
+    // Save
+    const saveButton = screen.getByTestId('button-save-transaction');
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+        expect(onSuccess).toHaveBeenCalled();
+    });
+  });
+
+  it('renders expense account selection for expenses', async () => {
+    const onSuccess = vi.fn();
+    render(
+      <AppProvider>
+        <TransactionForm onSuccess={onSuccess} />
+      </AppProvider>
+    );
+
+    const trigger = screen.getByTestId('select-type-trigger');
+    fireEvent.click(trigger);
+    
+    const expenseItem = await screen.findByRole('option', { name: 'Expense (Bank)' });
+    fireEvent.click(expenseItem);
+
+    expect(await screen.findByText('Expense/Asset Account')).toBeInTheDocument();
+  });
+
+  it('allows switching to advanced tab', async () => {
+    const user = userEvent.setup();
+    const onSuccess = vi.fn();
+    render(
+      <AppProvider>
+        <TransactionForm onSuccess={onSuccess} />
+      </AppProvider>
+    );
+
+    const advancedTab = screen.getByRole('tab', { name: 'Advanced Journal' });
+    await user.click(advancedTab);
+
+    // Look for text unique to the advanced tab
+    expect(await screen.findByText(/Advanced Journal Entry/i)).toBeInTheDocument();
   });
 });

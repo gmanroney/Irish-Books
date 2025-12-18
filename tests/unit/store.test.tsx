@@ -71,7 +71,7 @@ describe('AppStore', () => {
     expect(account?.name).toBe('Updated Name');
   });
 
-  it('calculates account balance correctly', () => {
+  it('calculates account balance correctly', async () => {
     const { result } = renderHook(() => useAppStore(), { wrapper });
     
     // We'll create a new provider state by adding a transaction manually to a specific account
@@ -97,22 +97,14 @@ describe('AppStore', () => {
       ]
     };
 
-    act(() => {
-        // We need to bypass the async delay for this sync check or wait
-        // But since getAccountBalance reads from state, we must update state first
-        // Let's use the async pattern
-         result.current.addTransaction(drTransaction);
-    });
-    
-    act(() => {
+    await act(async () => {
+        const promise = result.current.addTransaction(drTransaction);
         vi.advanceTimersByTime(500);
+        await promise;
     });
-
-    // Wait for state update to reflect
-    // Since renderHook doesn't automatically re-render for async state updates inside act unless awaited?
-    // Actually act() handles it if we await the promise.
     
-    // Let's redo the act block properly
+    // Check balance immediately after transaction added
+    expect(result.current.getAccountBalance(bankId)).toBe(initialBalance + 500);
   });
   
   it('calculates account balance correctly (async flow)', async () => {
