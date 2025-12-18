@@ -1,0 +1,100 @@
+---
+
+## Prompt: Create comprehensive unit tests (high coverage, edge cases, mocks)
+
+You are a senior engineer and test architect. Your job is to design and implement **comprehensive unit test cases** for this codebase.
+
+### 1) First: map the system under test
+
+* Identify the project language(s), framework(s), and package manager.
+* List the key modules/classes/functions that contain **business logic** (not UI).
+* Identify boundaries and external dependencies (DB, network, filesystem, time, random, environment variables).
+
+### 2) Define a unit test strategy
+
+Create a short written test strategy that includes:
+
+* What counts as a “unit” here (function/module/service)
+* What must be mocked vs what can be real
+* Naming conventions and folder structure
+* Test pyramid guidance (unit vs integration vs e2e)
+* Determinism rules (no real network/clock/DB in unit tests)
+
+### 3) Build a coverage-driven test plan
+
+For each core module/function, produce a test matrix with:
+
+* **Happy path** tests
+* **Edge cases** (null/empty, boundaries, min/max, unusual inputs)
+* **Error handling** (exceptions, invalid inputs, timeouts)
+* **State transitions** (before/after behavior)
+* **Security/safety** checks (validation, sanitization, auth/permission checks if relevant)
+* **Idempotency** and retry behavior (if relevant)
+
+### 4) Create test data + fixtures
+
+* Use factories/fixtures/builders to generate test data (no copy/paste blobs).
+* Include representative real-world examples.
+* Avoid brittle fixtures; keep them minimal and explain why they exist.
+
+### 5) Mock external dependencies correctly
+
+* Mock network calls, DB access, filesystem writes, message queues, and third-party SDKs.
+* Show how mocks are configured and asserted.
+* Verify side effects (calls made, payloads sent) as well as outputs.
+
+### 6) Ensure tests are high quality
+
+Every test must:
+
+* Have a clear Arrange / Act / Assert structure
+* Test one behavior (or one scenario) at a time
+* Include meaningful assertion messages
+* Avoid over-mocking (mock only boundaries)
+* Run fast and deterministically
+
+### 7) Implement tests in the repo
+
+* Create the test directory structure following ecosystem conventions.
+* Add any required config files (e.g. jest/vitest/pytest/junit).
+* Add scripts/commands to run:
+
+  * unit tests
+  * coverage report
+  * watch mode (optional)
+
+### 8) Add “negative” and regression tests
+
+* Add tests that replicate likely bugs:
+
+  * off-by-one
+  * floating-point rounding
+  * timezone/date parsing
+  * empty collections
+  * duplicate entries
+  * concurrency ordering (if applicable)
+* Add regression tests for any bugs found during review.
+
+### 9) Output and verification
+
+* Run the full unit test suite and fix any failures.
+* Report:
+
+  * number of tests added
+  * coverage summary
+  * any modules still not easily unit-testable and why (plus refactor suggestion)
+
+### Constraints
+
+* Do not change production behavior unless necessary for testability (if needed, propose minimal refactor).
+* No real API calls, no real DB writes, no reliance on current time.
+* Keep tests readable and maintainable—prefer clarity over cleverness.
+
+### Start now
+
+Begin by listing:
+
+1. the test framework you’ll use (and why),
+2. the top 10 highest-value units to test first,
+3. the test matrix for the first 3 units,
+   then implement the tests.
